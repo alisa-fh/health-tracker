@@ -1,0 +1,369 @@
+unit Account;
+
+interface
+
+uses
+  globalUnit, enterData, dateutils, Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, System.Math, StrUtils, Vcl.Imaging.pngimage;
+
+type
+  Tform_acc = class(TForm)
+    lbl_introCaption: TLabel;
+    btn_signIn: TButton;
+    shp_rect1: TShape;
+    btn_createAccount: TButton;
+    edt_caWeight: TEdit;
+    edt_caHeight: TEdit;
+    edt_caPassword: TEdit;
+    edt_caUsername: TEdit;
+    lbl_caUsername: TLabel;
+    lbl_caPassword: TLabel;
+    lbl_caHeight: TLabel;
+    lbl_metres: TLabel;
+    lbl_kg: TLabel;
+    lbl_caWeight: TLabel;
+    shp_rect2: TShape;
+    lbl_siUsername: TLabel;
+    lbl_siPassword: TLabel;
+    edt_siPassword: TEdit;
+    edt_siUsername: TEdit;
+    img_logo: TImage;
+    lb_gettingStarted: TLabel;
+    edt_signIn: TLabel;
+    lbl_caHeightError: TLabel;
+    lbl_caError: TLabel;
+    lbl_caPasswordError: TLabel;
+    lbl_caUsernameError: TLabel;
+    lbl_caWeightError: TLabel;
+    btn_dtb: TButton;
+    btn_temp: TButton;
+    memoCaUsername: TMemo;
+    img_qu: TImage;
+    lbl_siError: TLabel;
+    procedure btn_createAccountClick(Sender: TObject);
+    function validateCreateAccount(Username, Password, Height, Weight:TObject; var aUsername, aPassword: string; aHeight, aWeight: real):boolean;
+    procedure btn_signInClick(Sender: TObject);
+    procedure btn_tempClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure btn_dtbClick(Sender: TObject);
+    procedure img_quMouseEnter(Sender: TObject);
+    procedure img_quMouseLeave(Sender: TObject);
+
+
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  form_acc: Tform_acc;
+
+
+implementation
+
+{$R *.dfm}
+
+uses databases, dashboard;
+
+procedure enterDataInitialisation;
+var currentTime, midday, midnight, evening :TDateTime;
+begin
+currentTime:= now;
+midday:= encodeTime(12,00,00,00); //setting midday to 12pm
+midnight:= encodeTime(00,00,00,00); //setting midnight to 0am
+evening:= encodeTime(18,00,00,00);  //setting evening to 6pm
+if ((compareTime(currentTime, midnight)= 1) AND (compareTime(currentTime, midday)= -1)) OR (compareTime(currentTime, midnight)= 0)  then //between midnight and midday
+  form_enterData.lbl_greeting.Caption:= 'Good Morning ' + currentUser;
+if(compareTime(currentTime, midday)= 1) AND (compareTime(currentTime, evening)= -1) OR (compareTime(currentTime, midday)= 0) then //between midday and 6pm
+  form_enterData.lbl_greeting.Caption:= 'Good Afternoon ' + currentUser;
+if (compareTime(currentTime, evening)= 1) OR (compareTime(currentTime, evening)= 0) then //between 6pm and midnight
+  form_enterData.lbl_greeting.Caption:= 'Good Evening ' + currentUser;
+form_enterData.lbl_displayBmi.Caption:= (floattostr(roundto(currentBMI,-1))); //displaying currentBMI to 1 dp
+
+end;
+
+procedure Tform_acc.btn_dtbClick(Sender: TObject);
+begin
+frm_dtb.Show;
+end;
+
+procedure nextPage;
+var findFile: string;
+begin
+findFile:=FileSearch('sleepProgress.txt', currentDir); //checking for the sleep file in the user's directory
+if findFile = '' then
+  begin
+  Form_enterData.Show; //if no factor files have been created, details have not yet been entered, so show the 'enterData' page
+  end
+else
+  begin
+  factorBMI:= getFactorBMI; //initialising factorBMI
+  form_dashboard.show; //show dashboard
+  dashboardInitialisation;  //initialising dashboard
+  end;
+end;
+
+
+procedure Tform_acc.btn_signInClick(Sender: TObject);
+var aUsername, aPassword: string; // user's inputs
+    isError, isFound: boolean; //flags
+    f, path: string; //to hold file pathnames
+    existingUser, existingPassword:string; //usernames read from file
+begin
+isError:=FALSE;
+lbl_siError.Caption:= ''; //removing any previous error messages
+
+aUsername:= edt_siUsername.Text; //assigning the username and password variables
+aPassword:= edt_siPassword.Text;
+
+if (aUsername = '') OR (aPassword = '') then //if fields are blank
+    begin
+    lbl_siError.Caption:= 'Fields can not be left blank'; //error messsage
+    isError:= TRUE; //changing state of flag
+    end;
+
+if (isError= FALSE) then //only proceeds if all fields no fields are blank
+    begin
+    f:= getcurrentdir; //gets the current directory
+    path :=(leftstr(f,length(f)-11)); // gets the pathname of userDetails
+    assignfile(intUserDetails, path+'userDetails.dat');//creating an internal version of userDetails
+    reset(intUserDetails);  //Opening a read-only version of the internal file
+    isFound := FALSE; //initialising flag, indicating whether the username is found on userDetails
+    WHILE (not eof(intUserDetails)) AND (isFound= FALSE) do
+      begin
+      readln(intUserDetails, existingUser);//assigning each username to variable existingUser
+      if aUsername = existingUser then //if the username read is the same as the inputted username
+          begin
+          isFound :=TRUE; //changing state of flag
+          readln(intUserDetails, existingPassword); //reads the corresponding password
+          if existingPassword = aPassword then //if the password is found
+              begin
+              currentUser := aUsername; //intialising global variable currentUser
+              end
+          else
+              begin
+              isError:=TRUE; //changing state of flag
+              lbl_siError.Caption:= 'Incorrect password'; //error message
+              end;
+          end
+      else
+      readln(intUserDetails); //skipping past the password
+      end;
+
+    closefile(intUserdetails);
+    if (isFound= FALSE) then //checking state of flag isFound
+      begin
+      lbl_siError.Caption:= 'No existing user'; //error message
+      isError:= TRUE;
+      end;
+    end;
+
+if (isError= FALSE) then //if no errors
+    begin
+    //initialising global variables
+    currentDir:= getCurrentDir +'\' + currentUser; //the user's folder pathname
+    currentBMI:= getBMI;
+
+    Form_acc.Hide; //hiding the current form
+    nextpage; //procedure determines the next form to be viewed
+    end;
+
+enterDataInitialisation;
+
+
+
+end;
+
+//TEMPORARY PROCEDURE
+procedure Tform_acc.btn_tempClick(Sender: TObject);
+begin
+form_enterData.show;
+end;
+
+
+procedure Tform_acc.FormCreate(Sender: TObject);
+var date1, date2: tdate;
+begin
+btn_dtb.Hide;
+
+memoCaUsername.Visible:=false;
+memoCaUsername.Text:= 'Username should be between 6 and 15 characters,' +
+             ' and not contain characters /,? or \'  ;
+{btn_temp.Visible:=false;
+btn_dtb.Visible:= false;   }
+//shp_rect1.Brush.Color:= clWebMediumAquamarine;
+//shp_rect2.Brush.Color:= clWebMediumAquamarine;
+
+end;
+
+procedure Tform_acc.img_quMouseEnter(Sender: TObject); //hovering over img_qu
+begin
+memoCaUsername.Visible:=true; //memo is visible
+end;
+
+procedure Tform_acc.img_quMouseLeave(Sender: TObject); //moving mouse off img_qu
+begin
+memoCaUsername.Visible:=false; //memo is invisible
+end;
+
+function Tform_acc.validateCreateAccount(Username, Password, Height, Weight:TObject; var aUsername, aPassword: string; aHeight, aWeight: real):boolean;
+var isError: boolean;
+    f, path: string;
+    existingUser: string;
+    i: integer;
+begin
+isError:= FALSE; //initialising isError, the variable to be returned
+
+if (length(aUsername) <6) OR (length(aUsername) > 15)  then // Checking the length of the password
+  begin
+  lbl_caUsernameError.Caption:=  'Username must be between 6 and 15 characters';
+  isError:=TRUE;
+  end;
+
+for I := 1 to length(aUsername) do
+  if (aUsername[i] = '?') OR (aUsername[i] = '/') OR (aUsername[i] ='\') then
+      begin
+        isError:= TRUE;
+        lbl_caUsernameError.Caption:= 'Username should not have ?, / or \';
+      end;
+
+
+
+
+f:= getcurrentdir;
+path :=(leftstr(f,length(f)-11));
+assignfile(intUserDetails, path+'userDetails.dat');//creating an internal version of userDetails
+reset(intUserDetails);  //Opening a read only version of the internal file
+WHILE (not eof(intUserDetails)) AND (isError = FALSE) do
+  begin
+  readln(intUserDetails, existingUser);//assigning each username to variable existingUser
+  if existingUser = aUsername then //checking for another user with the same username
+      begin
+        isError := TRUE;
+        lbl_caWeightError.Caption:= 'User already exists'; //outputting error message
+      end;
+  readln(intUserDetails); //I am skipping a line: every second line is a username.
+  end;
+closefile(intUserdetails);
+
+
+
+if (length(aPassword) <6) OR (length(aPassword) > 15)  then // Checking the length of the password
+  begin
+  lbl_caPasswordError.Caption:=  'Password must be between 6 and 15 characters';
+  lbl_caPasswordError.Color:=clRed; // Outputting an error message in red
+  isError:=TRUE;
+  end;
+
+
+if (aHeight < 0.5) OR (aHeight > 3) then
+  begin
+  lbl_caHeightError.Caption:= 'Height is invalid';
+  isError := TRUE;
+  end;
+
+if (aWeight < 30) OR (aWeight > 200) then
+  begin
+  lbl_caWeightError.Caption:= 'Weight is invalid';
+  isError := TRUE;
+  end;
+
+result:= isError; //returns whether an error has occurred
+
+end;
+
+procedure Tform_acc.btn_createAccountClick(Sender: TObject);
+var
+isError, isInitialError: boolean; {initial error checks for the correct data
+type and ensures critical fields are not left blank}
+
+aUsername, aPassword: string;
+aHeight, aWeight: double;
+
+isHeightFloat, isWeightFloat: boolean;
+
+f, path: string;
+bmiProgress:textfile;
+
+begin
+lbl_caUsernameError.Caption:= ''; //hiding any previous error messages
+lbl_caPasswordError.Caption:= '';
+lbl_caHeightError.Caption:= '';
+lbl_caWeightError.Caption:= '';
+lbl_caError.Caption:='';
+
+isInitialError:= FALSE; //initialising isInitialError
+isError:= FALSE; //initialising isError
+aUsername:= edt_caUsername.Text;
+aPassword:= edt_caPassword.Text; //Assigning inputs to variables
+//I am not assigning the variable aHeight or aWeight until confirming the data type
+
+//initial validation to ensure inputs are of correct data type before main validation
+  //Checking if fields have been left blank
+if (aUsername = '') OR (aPassword = '') OR (edt_caHeight.Text = '') OR (edt_caWeight.Text = '') then
+    begin
+    lbl_caError.Caption:= 'Fields can not be left blank';
+    isInitialError:=TRUE;
+    end
+else
+    begin
+    isHeightFloat:= TryStrtoFloat(edt_caHeight.Text, aHeight);//If height is of type float, it is assigned to aHeight
+    if (isHeightFloat=FALSE) then
+        begin
+        lbl_caHeightError.Caption:= 'Height should be a number'; //ouputting an error message
+        isInitialError:= TRUE; //changing state of the flag
+        end;
+
+    isWeightFloat:= TryStrtoFloat(edt_caWeight.Text, aWeight);//If weight is of type float, it is assigned to aWeight
+    if (isWeightFloat=FALSE) then
+        begin
+        lbl_caWeightError.Caption:= 'Weight should be a number';  //ouputting an error message
+        isInitialError:= TRUE;  //changing state of the flag
+        end;
+
+
+    end;
+
+if isInitialError = FALSE then
+    begin
+    isError := validateCreateAccount(lbl_caUsernameError, lbl_caPasswordError, lbl_caHeightError, lbl_caWeightError, aUsername, aPassword, aHeight, aWeight);
+    end;
+
+if (isError = FALSE) AND (isInitialError = FALSE) then   //If no error
+    begin
+    currentBMI:= (aWeight/aHeight)/aHeight;
+    currentUser:= aUsername;
+
+    //adding them to file userDetails
+    f:= getcurrentdir;
+    path :=(leftstr(f,length(f)-11));
+    assignfile(intUserDetails, path+'userDetails.dat');//creating an internal version of userDetails
+    Append(intUserDetails);  //Opening version of the internal file where I can append to the bottom
+      writeln(intUserDetails, aUsername);
+      writeln(intUserDetails, aPassword);
+    closefile(intUserdetails);
+
+    CreateDir(currentUser); //CreateDir is a built in function
+    currentDir:= getCurrentDir +'\' + currentUser; //getting the directory of the current user's folder
+
+    Showmessage('Your account has been created '+currentUser); //an alert box
+
+    AssignFile(bmiProgress, currentDir+'\bmiProgress.txt'); //creating an internal and external version of bmiProgress
+      Rewrite(bmiProgress); //Opening an internal version of bmiProgress where I can Write into it
+      Writeln(bmiProgress);
+      Writeln(bmiProgress, datetostr(date)); //writing the date in bmiProgress
+      Writeln(bmiProgress, currentBMI:2:4); //writing the users bmi into bmiProgress
+    Closefile(bmiProgress);
+
+    enterDataInitialisation;
+
+    form_acc.Hide; //shows the current form
+    form_enterData.Show; //shows the enter data form
+    end;
+
+end;
+
+
+
+end.

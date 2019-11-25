@@ -1,0 +1,251 @@
+unit enterData;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ExtCtrls, System.Math,
+  Vcl.Imaging.pngimage, Vcl.Imaging.jpeg, dateUtils;
+
+procedure dashboardinitialisation;
+
+type
+  Tform_enterData = class(TForm)
+    lbl_title: TLabel;
+    lbl_greeting: TLabel;
+    lbl_bmi: TLabel;
+    shp_displayBmi: TShape;
+    lbl_displayBmi: TLabel;
+    Panel1: TPanel;
+    edt_happiness: TEdit;
+    edt_exercise: TEdit;
+    edt_water: TEdit;
+    edt_sleep: TEdit;
+    lbl_hoursOfSleep: TLabel;
+    lbl_glassesOfWater: TLabel;
+    lbl_happiness: TLabel;
+    lbl_hoursOfExercise: TLabel;
+    Image1: TImage;
+    lbl_arrow: TLabel;
+    Button1: TButton;
+    lbl_edError: TLabel;
+    lbl_edSleep: TLabel;
+    lbl_edWater: TLabel;
+    lbl_edHappi: TLabel;
+    lbl_edExerc: TLabel;
+    Image2: TImage;
+    lbl_privacy: TLabel;
+    mmo_privacy: TMemo;
+    procedure FormCreate(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+    procedure lbl_privacyMouseEnter(Sender: TObject);
+    procedure lbl_privacyMouseLeave(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+
+  end;
+
+var
+  form_enterData: Tform_enterData;
+  lbl_edError:TLabel;
+
+
+implementation
+uses globalUnit, dashboard;
+
+{$R *.dfm}
+
+procedure dashboardInitialisation;
+var currentTime, midday, midnight, evening :TDateTime;
+begin
+currentTime:= now;
+midday:= encodeTime(12,00,00,00); //setting midday to 12pm
+midnight:= encodeTime(00,00,00,00); //setting midnight to 0am
+evening:= encodeTime(18,00,00,00);  //setting evening to 6pm
+if ((compareTime(currentTime, midnight)= 1) AND (compareTime(currentTime, midday)= -1)) OR (compareTime(currentTime, midnight)= 0)  then //between midnight and midday
+  form_dashboard.lbl_greeting.Caption:= 'Good Morning ' + currentUser;
+if(compareTime(currentTime, midday)= 1) AND (compareTime(currentTime, evening)= -1) OR (compareTime(currentTime, midday)= 0) then //between midday and 6pm
+  form_dashboard.lbl_greeting.Caption:= 'Good Afternoon ' + currentUser;
+if (compareTime(currentTime, evening)= 1) OR (compareTime(currentTime, evening)= 0) then //between 6pm and midnight
+  form_dashboard.lbl_greeting.Caption:= 'Good Evening ' + currentUser;
+form_dashboard.lbl_displayBmi.Caption:= (floattostr(roundto(currentBMI,-1))); //displaying currentBMI to 1 dp
+
+if isPlan('sleepProgress') = TRUE then //if a sleep goal has been set
+  begin
+  form_dashboard.btn_sleepPlan.Visible:= FALSE; //'create plan' button is hid
+  form_dashboard.lbl_sleepCreated.Visible:= TRUE; //message is displayed
+  end;
+if isPlan('waterProgress') = TRUE then  //if a water goal has been set
+  begin
+  form_dashboard.btn_waterPlan.Visible:=FALSE;//'create plan' button is hid
+  form_dashboard.lbl_waterCreated.Visible:= TRUE; //message is displayed
+  end;
+if isPlan('happiProgress') = TRUE then  //if a happiness goal has been set
+  begin
+  form_dashboard.btn_happiPlan.Hide;//'create plan' button is hid
+  form_dashboard.lbl_happiCreated.Visible:= TRUE;  //message is displayed
+  end;
+if isPlan('exercProgress') = TRUE then  //if a exercise goal has been set
+  begin
+  form_dashboard.btn_exercPlan.Hide; //'create plan' button is hid
+  form_dashboard.lbl_exercCreated.Visible:= TRUE; //message is displayed
+  end;
+end;
+
+
+function validateFactorData(inpSleep, inpWater, inpHappi, inpExerc:TEdit; //inputs and their respective error labels
+errorLabel, sleepError, waterError, happiError, exercError: TLabel):boolean;
+var isBlank: boolean; //flag
+    isError:boolean;  //flag
+begin
+isBlank:=false; //initialising flags
+isError:=false;
+if (inpSleep.Text='') or (inpWater.Text='') or (inpExerc.Text='') or (inpHappi.Text='') then //if any fields are empty
+ begin
+ errorLabel.Caption:= ('Fields cannot be left blank'); //error message
+ isBlank:= TRUE; //changing state of flag
+ end;
+if isBlank=FALSE then //if no fields are blank
+  begin
+  if (tryStrToFloat(inpSleep.Text, origSleep)) = FALSE then //if input is of type float then its assigned to origSleep
+    begin
+    isError:= TRUE; //changing state of flag
+    SleepError.Caption:='Hours of sleep must be'+#13#10+'a numerical value'; //error message
+    end
+  else if (origSleep >=23) OR (origSleep <= 0) then //checking range of sleep hours
+       begin
+       isError:=TRUE; //changing state of flag
+       SleepError.Caption:= 'Hours of sleep'+#13#10+'must be sensible';//error message
+       end;
+  if tryStrToInt(inpWater.Text, origWater)= FALSE then //checking if input is integer
+    begin
+    isError:= TRUE; //changing state of flag
+    WaterError.Caption:= 'Glasses of water'+#13#10+'must be an integer'; //error message
+    end
+  else if (origWater <0) OR (origWater >200) then //checking range of water input
+       begin
+       isError:= TRUE; //changing state of flag
+       WaterError.Caption:= 'Glasses of water'+#13#10+ 'must be sensible'; //error message
+       end;
+  if tryStrToInt(inpHappi.Text, origHappi) = FALSE then //checking if input is integer
+    begin
+    isError:= TRUE; //changing state of flag
+    HappiError.Caption:= 'Happiness rating'+#13#10+ 'must be an integer'; //error message
+    end
+  else if (origHappi < 1) OR (origHappi >10) then //checking range of happiness input
+       begin
+       isError:= TRUE; //changing state of flag
+       HappiError.Caption:= 'Happiness must be'+#13#10+'between 1 and 10'; //error message
+       end;
+  if (tryStrToFloat(inpExerc.Text, origExerc) = FALSE) then //if input is of type float then its assigned to origExerc
+    begin
+    isError:=TRUE; //changing state of flag
+    ExercError.Caption:='Hours of exercise'+#13#10+ 'must be numerical'; //error message
+    end
+  else if (origExerc <0) OR (origExerc > 168) then //checking range of hours of exercise
+      begin
+      isError:= TRUE; //changing state of flag
+      ExercError.Caption:= 'Hours of exercise'+#13#10+'must be sensible'; //error message
+      end;
+
+  result:= isError;
+
+  end;
+end;
+
+procedure Tform_enterData.Button1Click(Sender: TObject);
+var isError:boolean;
+    sleepProgress:textfile;
+    waterProgress:textfile;
+    happiProgress:textfile;
+    exercProgress:textfile;
+  I: Integer;
+  ary_recentFactors:TMatrix;
+begin
+lbl_edError.Caption:='';
+lbl_edSleep.Caption:='';
+lbl_edWater.Caption:='';
+lbl_edHappi.Caption:='';
+lbl_edExerc.Caption:='';
+isError:= validateFactorData(edt_sleep, edt_water, edt_happiness, edt_exercise, lbl_edError, lbl_edSleep, lbl_edWater, lbl_edHappi, lbl_edExerc);
+if isError=FALSE then
+  begin
+  AssignFile(sleepProgress, currentDir+'\sleepProgress.txt'); //creating an internal and external version of sleepProgress
+    Rewrite(sleepProgress); //Opening an internal version of sleepProgress where I can write into it
+    Writeln(sleepProgress);
+    Writeln(sleepProgress, datetostr(date)); //writing the date into the file
+    Writeln(sleepProgress, origSleep:2:0); //writing the inputted data into the file
+  Closefile(sleepProgress); //closing sleepProgress
+  AssignFile(waterProgress, currentDir+'\waterProgress.txt'); //creating an internal and external version of waterProgress
+    Rewrite(waterProgress); //Opening an internal version of waterProgress where I can write into it
+    Writeln(waterProgress);
+    Writeln(waterProgress, datetostr(date)); //writing the date into the file
+    Writeln(waterProgress, origWater); //writing the inputted data into the file
+  Closefile(waterProgress); //closing waterProgress
+  AssignFile(happiProgress, currentDir+'\happiProgress.txt'); //creating an internal and external version of happiProgress
+    Rewrite(happiProgress); //Opening an internal version of happiProgress where I can write into it
+    Writeln(happiProgress);
+    Writeln(happiProgress, datetostr(date)); //writing the date into the file
+    Writeln(happiProgress, origHappi); //writing the inputted data into the file
+  Closefile(happiProgress); //closing happiProgress
+    AssignFile(exercProgress, currentDir+'\exercProgress.txt'); //creating an internal and external version of exercProgress
+    Rewrite(exercProgress); //Opening an internal version of exercProgress where I can write into it
+    Writeln(exercProgress);
+    Writeln(exercProgress, datetostr(date)); //writing the date into the file
+    Writeln(exercProgress, origExerc:2:0); //writing the inputted data into the file
+  Closefile(exercProgress); //closing exercProgress
+  isSleep:= isPlan('sleepProgress');
+  isWater:= isPlan('waterProgress');
+  isHappi:= isPlan('happiProgress');
+  isExerc:= isPlan('exercProgress');
+
+  ary_recentFactors:= arrayRecent; //gets the user's most recent values for each factor
+  factorBMI:= calcRegression(ary_recentFactors);
+  insertFactorBMI; //inserting factorBMI into bmiProgress
+  dashboardInitialisation;
+  form_dashboard.show;
+  form_enterData.Hide;
+  end;
+
+
+end;
+
+procedure Tform_enterData.FormCreate(Sender: TObject);
+begin
+Image2.SendToBack;
+image2.Transparent:= true;
+mmo_privacy.Visible:=false;
+
+
+
+lbl_edError.Caption:='';
+lbl_edSleep.Caption:='';
+lbl_edWater.Caption:='';
+lbl_edHappi.Caption:='';
+lbl_edExerc.Caption:='';
+lbl_hoursOfSleep.Caption:= 'How many hours'+#13#10+'of sleep do you'+#13#10+ 'have per day?';
+lbl_glassesOfWater.Caption:= 'How many 250ml'+#13#10+'glasses of water do you'+#13#10+ 'have per day?';
+lbl_happiness.Caption:= 'On a scale of 1 to'+#13#10+'10, how happy'+#13#10+ 'are you?';
+lbl_hoursOfExercise.Caption:= 'How many hours'+#13#10+'of exercise do you'+#13#10+ 'perform per day?';
+lbl_arrow.Caption:= 'Enter your data above'+#13#10+ 'as accurately'+#13#10+'as possible to get started!';
+
+
+end;
+
+procedure Tform_enterData.lbl_privacyMouseEnter(Sender: TObject);
+begin
+mmo_privacy.Visible:=true;
+mmo_privacy.Text:= 'Your data will not be shared with anyone.' +
+                   ' It will only be used to personalise your' +
+                   ' experience.';
+
+end;
+
+procedure Tform_enterData.lbl_privacyMouseLeave(Sender: TObject);
+begin
+mmo_privacy.Visible:=false;
+end;
+
+end.

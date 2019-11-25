@@ -1,0 +1,42 @@
+unit exercEnterDaily;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage,
+  Vcl.ExtCtrls;
+
+type
+  Tform_exercEnterDaily = class(TForm)
+    lbl_goal: TLabel;
+    lbl_displaygoal: TLabel;
+    shp_displayGoal: TShape;
+    lbl_date: TLabel;
+    lbl_bmi: TLabel;
+    lbl_displayBMI: TLabel;
+    shp_displayBMI: TShape;
+    lbl_question: TLabel;
+    lbl_bounds: TLabel;
+    Panel1: TPanel;
+    img_icon: TImage;
+    lbl_execTracker: TLabel;
+    lbl_back: TLabel;
+    cbo_selectView: TComboBox;
+    edt_input: TEdit;
+    btn_submit: TButton;
+    mmo_comment: TMemo;
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  form_exercEnterDaily: Tform_exercEnterDaily;
+
+implementation
+
+{$R *.dfm}
+
+end.

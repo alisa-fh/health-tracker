@@ -1,0 +1,61 @@
+unit bmiTrack;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.WinXCalendars, Vcl.StdCtrls,
+  Vcl.Grids, Vcl.ExtCtrls, Vcl.Imaging.pngimage, dashboard, bmiEnterDaily, globalUnit, system.Math;
+
+type
+  Tform_bmiTrack = class(TForm)
+    lbl_goal: TLabel;
+    lbl_displaygoal: TLabel;
+    shp_displayGoal: TShape;
+    lbl_showdata: TLabel;
+    lbl_showOneDay: TLabel;
+    lbl_viewManyError: TLabel;
+    img_qu: TImage;
+    lbl_viewOneError: TLabel;
+    Panel1: TPanel;
+    img_icon: TImage;
+    lbl_bmiTracker: TLabel;
+    lbl_back: TLabel;
+    cbo_selectView: TComboBox;
+    cbo_days: TComboBox;
+    stg_viewMany: TStringGrid;
+    stg_viewOne: TStringGrid;
+    mmo_help: TMemo;
+    cdr_selectDate: TCalendarView;
+    procedure cbo_selectViewChange(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  form_bmiTrack: Tform_bmiTrack;
+
+implementation
+
+{$R *.dfm}
+
+procedure Tform_bmiTrack.cbo_selectViewChange(Sender: TObject);
+begin
+  begin
+  form_bmiTrack.Hide; //hide the current form
+  form_bmiEnterDaily.show; //show the data entry form
+  form_bmiEnterDaily.lbl_date.Caption:= ' Todays date is ' + datetostr(date); //display date
+  form_bmiEnterDaily.lbl_displaybmi.caption:= floattostr(roundto(getBMI,-1)); //display BMI
+  if isTodayRecorded('bmi') = TRUE then  //if data has been recorded today
+    begin
+    form_bmiEnterDaily.edt_input.ReadOnly:=TRUE; //make edit box read only
+    form_bmiEnterDaily.edt_input.Text:= 'Todays data has been recorded';  //display message
+    form_bmiEnterDaily.edt_input.Font.Style:=[fsBold]; //change font to bold
+    form_bmiEnterDaily.btn_submit.Hide; //hide the submit button
+    end;
+  end;
+end;
+
+end.

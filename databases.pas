@@ -1,0 +1,240 @@
+unit databases;
+
+interface
+
+uses
+  globalUnit, Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, System.Math, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Data.DB,
+  Data.Win.ADODB, Vcl.Grids, Vcl.DBGrids, Vcl.StdCtrls;
+
+type
+  Tfrm_dtb = class(TForm)
+    ADOConnection1: TADOConnection;
+    ADOQuery1: TADOQuery;
+    DataSource1: TDataSource;
+    dtb_sampleBMI: TDBGrid;
+    stg_viewBMI: TStringGrid;
+    btn_viewBmiGrid: TButton;
+    stg_viewFactors: TStringGrid;
+    btn_viewFactorGrid: TButton;
+    stg_viewTrans: TStringGrid;
+    procedure FormCreate(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+
+
+  end;
+
+var
+
+  frm_dtb: Tfrm_dtb; //current form
+
+
+implementation
+{$R *.dfm}
+uses enterData, Account;
+
+//transpose origArray of dimensions (x by y)
+function transpose(origArray: TMatrix; x,y: integer): TMatrix;
+var transposedArray: TMatrix; //array to be returned
+    i,j: integer;   //pointers for matrix
+begin
+setlength(transposedArray, y ,x); //setting dimensions of transposedArray: y rows, x columns
+for i := 0 to (x-1) do //going across the rows of origArray
+    for j := 0 to (y-1) do //going down the columns of origArray
+      transposedArray[j,i]:= origArray[i,j]; //assigning values to transposedArray
+result:= transposedArray; //returning transposedArray
+end;
+
+//multiply matrix1 and matrix2 with respective dimensions 1x, 1y and 2x, 2y
+function multiplyMatrix(matrix1, matrix2: TMatrix; _1x, _1y, _2x, _2y: integer):TMatrix;
+var resultMatrix: TMatrix; //result of multiplication
+    i,j,k: integer; //index integers
+begin
+if _1y <> _2x then
+  showmessage('ERROR: multiplication is not possible') //alert if multiplication not possible
+else
+  begin
+  setlength(resultMatrix, _1x, _2y); //setting dimensions of result matrix
+  for i := 0 to (_1x -1) do
+    for j := 0 to (_2y -1) do
+      begin
+      resultMatrix[i,j]:= 0; //initialising each matrix value
+        for k := 0 to (_1y -1) do
+          begin
+          //keeping a running total of each resultMatrix value
+          resultMatrix[i,j]:= resultMatrix[i,j] +matrix1[i,k]*matrix2[k,j];
+          end;
+      end;
+  end;
+result:= resultMatrix; //returning resultMatrix
+end;
+
+
+
+
+function Minor(largeMatrix: TMatrix; largeMatrixRows, largeMatrixCols: integer; targetX, targetY:integer):TMatrix;
+//largeMatrix is the matrix for which I am making minors
+//largeMatrixRows and largeMatrixCols are the number of rows and columns in largeMatrix
+//targetX and targetY are the coordinates about which I am making a minor
+var
+ary_minor: TMatrix; //minor matrix
+Mx, My: integer; //coordinates of a minor matrix
+i, j: integer;
+begin
+setLength(ary_minor, largeMatrixRows-1, largeMatrixCols-1);
+Mx:= 0; //initialising minor coordinates
+My:= 0;
+for i := 0 to (largeMatrixRows-1) do //going through largeMatrix row by row
+  for j := 0 to (largeMatrixCols-1) do //going across columns of largeMatrix
+    begin
+    if (i<>targetX) AND (j<>targetY) then //if current coordinates don't have the same row or column as target coordinates
+      begin
+      ary_minor[Mx, My]:= largeMatrix[i,j]; //assigning value to ary_minor
+      if (My = 2)then //if end of ary_minor's row
+        begin
+        Mx := Mx+1;  //next row
+        My := 0;     //reinitialise column
+        end
+      else
+        My := My + 1; //next column
+      end;
+    end;
+result:= ary_minor; //return ary_minor
+
+end;
+//showmessage('for aMinor [' + inttostr(targetX) + ','+ inttostr(targetY) + '], ary_minor['+inttostr(Mx)+inttostr(My)+'] = '+ floattostr(largeMatrix[i,j]));
+
+function threeDeterminant(aMatrix:TMatrix):double;
+var A, B, C: double; //three components of determinant calculation
+determinant: double; //determinant of aMatrix, to be returned
+begin
+//calculation components
+A:= aMatrix[0,0]*(aMatrix[1,1]*aMatrix[2,2]-aMatrix[1,2]*aMatrix[2,1]);
+B:= aMatrix[0,1]*(aMatrix[1,0]*aMatrix[2,2]-aMatrix[1,2]*aMatrix[2,0]);
+C:= aMatrix[0,2]*(aMatrix[1,0]*aMatrix[2,1]-aMatrix[1,1]*aMatrix[2,0]);
+determinant:= A-B+C;
+result:= determinant; //returning determinant
+end;
+//find cofactor matrix
+function cofactor(detMatrix:TMatrix):TMatrix; //parameter is the determinant matrix
+var ary_cofactor: TMatrix;  //cofactor matrix to be returned
+    i,j, det_factorMult: integer;
+begin
+setlength(ary_cofactor, 4, 4); //setting the dimensions of ary_cofactor as 4x4
+for i := 0 to 3 do
+  for j := 0 to 3 do
+    ary_cofactor[i,j]:= power(-1,(i+j)) * detMatrix[i,j];  //assigning values to ary_cofactor from equation
+result:= ary_cofactor; //returning ary_cofactor
+
+end;
+//determinant of a 4x4 matrix
+function fourDeterminant(aMatrix, aDet: TMatrix):Double;
+var col: integer;
+    detAMatrix: double; //determinant of aMatrix
+begin
+col:=0; //initialising column
+detAMatrix:=0;
+while col<4 do
+  begin
+  detAMatrix:= detAMatrix + aMatrix[0,col]*aDet[0,col];
+  col:=col+1; //next column
+  detAMatrix:= detAMatrix - aMatrix[0,col]*aDet[0,col];
+  col:=col+1; //next column
+  end;
+result:= detAMatrix; //returning determinant
+end;
+
+//dividing a 4x4 matrix (aMatrix) by a scalar.
+function divScalar(aMatrix:TMatrix; scalar: double):TMatrix;
+var i, j: integer;
+    divResult: TMatrix; //result to be returned
+begin
+setlength(divResult,4,4); //setting dimensions to 4 x 4
+for i := 0 to 3 do
+  for j := 0 to 3 do
+    divResult[i,j]:=aMatrix[i,j]/ (scalar); //dividing a particular cell by the scalar
+result:=divResult; //returning the result
+end;
+
+//inverting aMatrix of dimension numRows by numColumns
+function invertMatrix(aMatrix: TMatrix; numRows,numCols: integer):TMatrix;
+var aMinor: T4DArray; //aMinor is a 4 x 4 2D array, each cell holding a 3 x 3 2D array
+    targetX, targetY: integer;
+    aDet, aCofactor, adjCofactor, ary_factorInv: TMatrix;
+    i,j: integer;
+    detFactorMult: double;
+begin
+Setlength(aMinor, 4,4,3,3); //setting the dimensions of aMinor as 4 x 4 x 3 x 3
+for targetX := 0 to numRows-1 do
+  for targetY := 0 to numCols-1 do
+    //aMatrix of dimensions (numRows x numCols) is the matrix for which I am creating minors
+    //targetX and targetY are the coordinates for which I am making a minor matrix
+    aMinor[targetX,targetY]:= Minor(aMatrix, numRows, numCols, targetX,targetY);
+Setlength(aDet, 4, 4); //setting dimensions of aDet: 4 x 4
+for i := 0 to 3 do //going through aDet and aMinor
+  for j := 0 to 3 do
+    aDet[i,j]:= threeDeterminant(aMinor[i,j]); //returns the determinant for each minor matrix in aMinor
+aCofactor:= cofactor(aDet); //calling function cofactor, returning the cofactor matrix of type TMatrix
+adjCofactor:= transpose(aCofactor, 4, 4); //finding the adjugate of cofactor
+detFactorMult:= fourDeterminant(aMatrix, aDet); //aMatrix: matrix finding a determinant of, aDet: determinants of aMatrix's minors
+ary_factorInv:= divScalar(adjCofactor, detFactorMult); //adjCofactor is being divided by detFactorMult
+result:= ary_factorInv;
+end;
+//on creating form
+procedure Tfrm_dtb.FormCreate(Sender: TObject);
+var
+  ary_factorTrans, ary_factorMult, ary_factorInv, ary_factorInvTrans: TMatrix;
+  i,j :integer;
+begin
+//setting dimensions of arrays
+setlength(ary_factorTrans, 4, 20);
+setLength(ary_factors, 20, 4);
+setLength(ary_factorMult, 4,4);
+setLength(ary_BMI, 20,1);
+
+//each iteration for each row of the grid
+for i := 0 to 19 do
+  begin
+  //assigning cell value to ary_BMI
+  ary_bmi[i,0]:= (dataSource1.DataSet.Fields.Fields[0].AsFloat);
+  //next row of the grid
+  datasource1.DataSet.Next;
+  end;
+
+//to ensure I have saved the data correctly, I am displaying it:
+for i := 0 to 19 do
+  stg_viewBMI.Cells[0,i]:= floattostr(ary_bmi[i, 0]);
+
+datasource1.DataSet.first; //initialising pointer
+
+for i := 0 to 19 do //going down 20 rows
+  begin
+  for j := 0 to 3 do //going across 4 rows
+    //assigning value into ary_factors from database
+    ary_factors[i,j]:= (dataSource1.DataSet.Fields.Fields[j+1].AsFloat);
+  datasource1.DataSet.Next; //next row after each row has been read in
+  end;
+
+
+//displaying my array on the grid
+for i := 0 to 19 do
+  for j := 0 to 3 do
+    stg_viewFactors.Cells[j,i]:= floattostr(ary_factors[i,j]);
+//creating ary_factorTrans from ary_factors of dimension 20 x 4
+ary_factorTrans:= transpose(ary_factors, 20, 4);
+//displaying my array on the grid
+for i := 0 to 3 do
+  for j := 0 to 19 do
+    stg_viewTrans.Cells[j,i]:= floattostr(ary_factorTrans[i,j]);
+
+ary_factorMult:= multiplyMatrix(ary_factorTrans, ary_factors, 4, 20, 20, 4); //multiplying
+ary_factorInv:= invertMatrix(ary_factorMult, 4,4); //inverse
+ary_factorInvTrans:= multiplyMatrix(ary_factorInv, ary_factorTrans,4,4,4,20);  //multiplying
+ary_coeff:= multiplyMatrix(ary_factorInvTrans,ary_BMI,4,20,20,1); //multiplying
+frm_dtb.Visible:=false; //hiding this form because it is abstracted from user
+end;
+
+end.

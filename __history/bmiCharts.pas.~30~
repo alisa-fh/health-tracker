@@ -1,0 +1,196 @@
+unit bmiCharts;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, VclTee.TeeGDIPlus, VCLTee.TeEngine,
+  Vcl.ExtCtrls, VCLTee.TeeProcs, VCLTee.Chart, globalUnit, Vcl.StdCtrls,
+  Vcl.WinXCalendars, Vcl.Grids, VCLTee.Series, math;
+
+type
+  Tform_bmiCharts = class(TForm)
+    cht_bmi: TChart;
+    cdr_selectDate: TCalendarView;
+    lbl_title: TLabel;
+    btn_choice1: TButton;
+    btn_choice2: TButton;
+    btn_choice3: TButton;
+    btn_choice4: TButton;
+    btn_choice5: TButton;
+    stg_choices: TStringGrid;
+    btn_view: TButton;
+    lbl_cdrError: TLabel;
+    lbl_stgError: TLabel;
+    Series1: TLineSeries;
+    Button1: TButton;
+    procedure FormCreate(Sender: TObject);
+    procedure btn_choice1Click(Sender: TObject);
+    procedure btn_choice2Click(Sender: TObject);
+    procedure btn_choice3Click(Sender: TObject);
+    procedure btn_choice4Click(Sender: TObject);
+    procedure btn_choice5Click(Sender: TObject);
+    procedure btn_viewClick(Sender: TObject);
+    procedure Button1Click(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  form_bmiCharts: Tform_bmiCharts;
+  //array holding all the chosen BMIs and Dates
+  chartDataBMI: array[0..4] of double;
+  chartDataDate:array[0..4] of TDate;
+
+implementation
+
+{$R *.dfm}
+
+//adding choice to stringGrid. Parameters: choice, calendar, error label, stringgrid
+procedure addChoice(choiceNum:integer; calendar: TCalendarView; errorLabel:TLabel; stg_choices:TStringGrid);
+var
+path:string;
+index: integer;
+bmiData: TStringList;
+length: integer;
+begin
+path:= currentDir + '\' +'bmiProgress.txt'; //directory of the user's factor progress file
+bmiData:=TStringList.Create; //creating a stringList to hold all the data in the progress file
+bmiData.LoadFromFile(path); //loading the file data into stringList factorData
+length:= bmiData.Count; //getting length of bmiData
+index:= searchDate(bmiData, calendar.Date, 1, length-1); //finding index of date in bmiProgress
+if index = -1 then //if date not found
+  begin
+  errorLabel.show; //show error message
+  errorLabel.Caption:='There is no recorded '+#13#10+'data for this date' //error caption
+  end
+else //if date is found
+  begin
+  stg_choices.cells[1,choiceNum-1]:= bmiData[index]; //display date on grid
+  chartDataBMI[choiceNum-1]:= strtofloat(bmiData[index+1]); //assigning BMI to array of all BMIs
+  chartDataDate[choiceNum-1]:= strtodate(bmiData[index]); //assigning date to array of all dates
+  end;
+bmiData.Free; //free stringgrid
+end;
+
+//on clicking 'Add as choice 1'
+procedure Tform_bmiCharts.btn_choice1Click(Sender: TObject);
+begin
+lbl_cdrError.Hide; //hide any previous error messages
+addChoice(1, cdr_selectDate, lbl_cdrError, stg_choices); //procedure addChoice
+end;
+
+//on clicking 'Add as choice 2'
+procedure Tform_bmiCharts.btn_choice2Click(Sender: TObject);
+begin
+lbl_cdrError.Hide; //hide any previous error messages
+addChoice(2, cdr_selectDate, lbl_cdrError, stg_choices); //procedure addChoice
+end;
+
+//on clicking 'Add as choice 3'
+procedure Tform_bmiCharts.btn_choice3Click(Sender: TObject);
+begin
+lbl_cdrError.Hide; //hide any previous error messages
+addChoice(3, cdr_selectDate, lbl_cdrError, stg_choices); //procedure addChoice
+end;
+
+//on clicking 'Add as choice 4'
+procedure Tform_bmiCharts.btn_choice4Click(Sender: TObject);
+begin
+lbl_cdrError.Hide; //hide any previous error messages
+addChoice(4, cdr_selectDate, lbl_cdrError, stg_choices); //procedure addChoice
+end;
+
+//on clicking 'Add as choice 5'
+procedure Tform_bmiCharts.btn_choice5Click(Sender: TObject);
+begin
+lbl_cdrError.Hide; //hide any previous error messages
+addChoice(5, cdr_selectDate, lbl_cdrError, stg_choices); //procedure addChoice
+end;
+
+//get min date from an array[0..4] of date
+function getMinDate(dateArray:array of Tdate):Tdate;
+var
+minDate: Tdate;
+I:integer;
+begin
+minDate:= dateArray[0]; //minDate initialised as the first array value
+for i := 1 to 4 do   //comparing each date against minDate
+  if dateArray[i] < minDate then
+    minDate:= dateArray[i]; //changing minDate for a smaller date
+result:= minDate; //returning the smallest date from the array
+end;
+
+//get max date from an array[0..4] of date
+function getMaxDate(dateArray:array of Tdate):Tdate;
+var
+maxDate: Tdate;
+I:integer;
+begin
+maxDate:= dateArray[0];  //maxDate initialised as first array value
+for i := 1 to 4 do  //comparing each date against maxDate
+  if dateArray[i] > maxDate then
+    maxDate:= dateArray[i]; //changing maxDate for a higher date
+result:= maxDate; //returning highest date
+end;
+
+//on clicking 'View on graph'
+procedure Tform_bmiCharts.btn_viewClick(Sender: TObject);
+var
+row, I:integer;
+isBlank: boolean;
+minDate,maxDate:TDate;
+begin
+lbl_stgError.hide; //hiding the error label
+isBlank:= FALSE; //isBlank intialisation
+for row := 0 to 4 do  //going through each grid row
+  if stg_choices.Cells[1,row]= '' then //ensuring all choices are full
+    begin
+    isBlank:=TRUE; //set state of flag
+    lbl_stgError.show; //showing error label
+    lbl_stgError.Caption:= 'Please fill all choices'; //error message
+    end;
+
+if isBlank = FALSE then //if no fields are blank
+  begin
+  minDate:= getMinDate(chartDataDate); //getting the lowest date chosen
+  maxDate:= getMaxDate(chartDataDate); //getting the highest date chosen
+
+  series1.GetHorizAxis.SetMinMax(minDate,maxDate); //setting min and max values for x axis
+  series1.GetVertAxis.SetMinMax(minValue(chartDataBMI),maxValue(chartDataBMI)); //setting min and max values for y axis
+
+  for i := 0 to 4 do //going through each 4 sets of data
+    begin
+    //adding x and y coordinates to the chart
+    series1.AddXY(chartDataDate[i], chartDatabmi[i], formatDateTime('dd/mm/yyyy', chartDatadate[i]),1);
+    end;
+  end;
+end;
+
+procedure Tform_bmiCharts.Button1Click(Sender: TObject);
+var
+  i: Integer;
+begin
+for i := 0 to 4 do
+  stg_choices.Cells[1,i]:='';
+lbl_stgError.Hide;
+end;
+
+//on creating form_bmiCharts
+procedure Tform_bmiCharts.FormCreate(Sender: TObject);
+begin
+lbl_cdrError.Hide; //hide the error label by the calendar
+lbl_stgError.Hide; //hide the error label by the string grid
+
+//putting 'Choice' captions in the first column
+stg_choices.Cells[0,0]:='Choice 1';
+stg_choices.Cells[0,1]:='Choice 2';
+stg_choices.Cells[0,2]:='Choice 3';
+stg_choices.Cells[0,3]:='Choice 4';
+stg_choices.Cells[0,4]:='Choice 5';
+
+end;
+
+end.

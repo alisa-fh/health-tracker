@@ -1,0 +1,194 @@
+unit dashboard;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, globalUnit, Vcl.StdCtrls, Vcl.ExtCtrls,
+  Vcl.Imaging.jpeg, sleepTrack, sleepPlan, waterPlan, exercPlan, happiPlan, system.math, Vcl.Imaging.pngimage;
+
+type
+  Tform_dashboard = class(TForm)
+    img_background: TImage;
+    lbl_bmi: TLabel;
+    shp_displayBmi: TShape;
+    lbl_displayBmi: TLabel;
+    lbl_greeting: TLabel;
+    lbl_sleep: TLabel;
+    lbl_water: TLabel;
+    lbl_exercise: TLabel;
+    lbl_happiness: TLabel;
+    btn_sleepTrack: TButton;
+    btn_waterTrack: TButton;
+    btn_exercTrack: TButton;
+    btn_happiTrack: TButton;
+    btn_sleepPlan: TButton;
+    btn_waterPlan: TButton;
+    btn_exercPlan: TButton;
+    btn_happiPlan: TButton;
+    lbl_bmiTrack: TLabel;
+    Label1: TLabel;
+    lbl_sleepCreated: TLabel;
+    lbl_waterCreated: TLabel;
+    lbl_exercCreated: TLabel;
+    lbl_happiCreated: TLabel;
+    Image1: TImage;
+    img_water: TImage;
+    img_exerc: TImage;
+    img_happi: TImage;
+    procedure btn_sleepPlanClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure img_happiMouseEnter(Sender: TObject);
+    procedure img_happiMouseLeave(Sender: TObject);
+    procedure Image1MouseEnter(Sender: TObject);
+    procedure Image1MouseLeave(Sender: TObject);
+    procedure img_waterMouseEnter(Sender: TObject);
+    procedure img_waterMouseLeave(Sender: TObject);
+    procedure img_exercMouseEnter(Sender: TObject);
+    procedure img_exercMouseLeave(Sender: TObject);
+    procedure btn_waterPlanClick(Sender: TObject);
+    procedure btn_exercPlanClick(Sender: TObject);
+    procedure btn_happiPlanClick(Sender: TObject);
+    procedure btn_sleepTrackClick(Sender: TObject);
+    procedure btn_waterTrackClick(Sender: TObject);
+    procedure btn_exercTrackClick(Sender: TObject);
+    procedure btn_happiTrackClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  form_dashboard: Tform_dashboard;
+
+implementation
+
+{$R *.dfm}
+
+procedure Tform_dashboard.btn_exercPlanClick(Sender: TObject);
+begin
+form_dashboard.Hide; //hide the dashboard
+form_exercPlan.Show; //show form_sleepPlan
+form_exercPlan.lbl_displayBmi.Caption:= floattostr(roundto(getBMI,-1)); //display BMI on form_sleepPlan
+end;
+
+procedure Tform_dashboard.btn_exercTrackClick(Sender: TObject);
+begin
+if (isPlan('exercProgress') = TRUE) then //if a plan has been created
+  begin
+  form_dashboard.Hide; //hide the dashboard
+  form_exercTrack.show; //show sleep tracking form
+  form_exercTrack.lbl_displaygoal.Caption:= getGoal('exerc') +' hours'; //output goal using function getGoal
+  end
+else messagedlg('You must first create a health plan.', mtInformation, [mbCancel], 0);
+end;
+
+procedure Tform_dashboard.btn_happiPlanClick(Sender: TObject);
+begin
+form_dashboard.Hide; //hide the dashboard
+form_happiPlan.Show; //show form_sleepPlan
+form_happiPlan.lbl_displayBmi.Caption:= floattostr(roundto(getBMI,-1)); //display BMI on form_sleepPlan
+end;
+
+procedure Tform_dashboard.btn_happiTrackClick(Sender: TObject);
+begin
+if (isPlan('happiProgress') = TRUE) then //if a plan has been created
+  begin
+  form_dashboard.Hide; //hide the dashboard
+  form_happiTrack.show; //show sleep tracking form
+  form_happiTrack.lbl_displaygoal.Caption:= getGoal('happi') +' hours'; //output goal using function getGoal
+  end
+else messagedlg('You must first create a health plan.', mtInformation, [mbCancel], 0);
+end;
+
+procedure Tform_dashboard.btn_sleepPlanClick(Sender: TObject);
+begin
+form_dashboard.Hide; //hide the dashboard
+form_sleepPlan.Show; //show form_sleepPlan
+form_sleepPlan.lbl_displayBmi.Caption:= floattostr(roundto(getBMI,-1)); //display BMI on form_sleepPlan
+end;
+
+procedure Tform_dashboard.btn_sleepTrackClick(Sender: TObject);
+begin
+if (isPlan('sleepProgress') = TRUE) then //if a plan has been created
+  begin
+  form_dashboard.Hide; //hide the dashboard
+  form_sleepTrack.show; //show sleep tracking form
+  form_sleepTrack.lbl_displaygoal.Caption:= getGoal('sleep') +' hours'; //output goal using function getGoal
+  end
+else
+  messagedlg('You must first create a health plan.', mtInformation, [mbCancel], 0);
+end;
+
+procedure Tform_dashboard.btn_waterPlanClick(Sender: TObject);
+begin
+form_dashboard.Hide; //hide the dashboard
+form_waterPlan.Show; //show form_sleepPlan
+form_waterPlan.lbl_displayBmi.Caption:= floattostr(roundto(getBMI,-1)); //display BMI on form_sleepPlan
+end;
+
+procedure Tform_dashboard.btn_waterTrackClick(Sender: TObject);
+begin
+if (isPlan('waterProgress') = TRUE) then //if a plan has been created
+  begin
+  form_dashboard.Hide; //hide the dashboard
+  form_sleepTrack.show; //show sleep tracking form
+  form_sleepTrack.lbl_displaygoal.Caption:= getGoal('water') +' hours'; //output goal using function getGoal
+  end
+else messagedlg('You must first create a health plan.', mtInformation, [mbCancel], 0);
+end;
+
+procedure Tform_dashboard.FormCreate(Sender: TObject);
+begin
+lbl_sleepCreated.Visible:=FALSE;
+lbl_waterCreated.Visible:=FALSE;
+lbl_happiCreated.Visible:=FALSE;
+lbl_exercCreated.Visible:=FALSE;
+lbl_sleep.visible:=false;
+lbl_water.visible:=false;
+lbl_happiness.visible:=false;
+lbl_exercise.visible:=false;
+end;
+
+procedure Tform_dashboard.Image1MouseEnter(Sender: TObject); //hovering over icon
+begin
+lbl_sleep.Visible:=TRUE; //label is visible
+end;
+
+procedure Tform_dashboard.Image1MouseLeave(Sender: TObject); //stop hovering over icon
+begin
+lbl_sleep.Visible:=FALSE; //label is invisible
+end;
+
+procedure Tform_dashboard.img_exercMouseEnter(Sender: TObject); //hovering over icon
+begin
+lbl_exercise.Visible:=TRUE;  //label is visible
+end;
+
+procedure Tform_dashboard.img_exercMouseLeave(Sender: TObject); //hovering over icon
+begin
+lbl_exercise.Visible:=FALSE; //label is invisible
+end;
+
+procedure Tform_dashboard.img_happiMouseEnter(Sender: TObject);
+begin
+lbl_happiness.Visible:=TRUE;
+end;
+
+procedure Tform_dashboard.img_happiMouseLeave(Sender: TObject);
+begin
+lbl_happiness.Visible:=FALSE;
+end;
+
+procedure Tform_dashboard.img_waterMouseEnter(Sender: TObject);
+begin
+lbl_water.Visible:=TRUE;
+end;
+
+procedure Tform_dashboard.img_waterMouseLeave(Sender: TObject);
+begin
+lbl_water.Visible:=FALSE;
+end;
+
+end.

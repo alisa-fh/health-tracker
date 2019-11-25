@@ -1,0 +1,129 @@
+unit bmiEnterDaily;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage, globalUnit, system.Math,
+  Vcl.ExtCtrls;
+
+type
+  Tform_bmiEnterDaily = class(TForm)
+    lbl_date: TLabel;
+    lbl_bmi: TLabel;
+    lbl_displayBMI: TLabel;
+    shp_displayBMI: TShape;
+    lbl_height: TLabel;
+    lbl_metres: TLabel;
+    Panel1: TPanel;
+    img_icon: TImage;
+    lbl_sleepTracker: TLabel;
+    lbl_back: TLabel;
+    cbo_selectView: TComboBox;
+    edt_weight: TEdit;
+    btn_submit: TButton;
+    mmo_comment: TMemo;
+    edt_height: TEdit;
+    lbl_weight: TLabel;
+    lbl_kg: TLabel;
+    edt_message: TEdit;
+    procedure btn_submitClick(Sender: TObject);
+    procedure FormCreate(Sender: TObject);
+    procedure cbo_selectViewChange(Sender: TObject);
+    procedure lbl_backClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  form_bmiEnterDaily: Tform_bmiEnterDaily;
+
+implementation
+
+{$R *.dfm}
+
+uses bmiTrack, dashboard;
+
+function validateWeightHeight(inpWeight, inpHeight:string):boolean;
+var
+weight, height:double;
+isError, isBlank: boolean;
+begin
+isError:= false;
+isBlank:= false;
+if (inpWeight='') OR (inpHeight = '') then
+  begin
+  messageDlg('Fields must not be left blank', mtError, [mbCancel], 0);
+  isBlank := TRUE;
+  end;
+if isBlank= FALSE then  //if fields are not blank
+  if TryStrToFloat(inpWeight, weight) = TRUE AND TryStrToFloat(inpHeight, height)=TRUE then //are inputs numerical
+    begin
+    if (weight <30) OR (weight > 200) OR (height<0.5) OR (height > 3) then //within acceptable ranges?
+      begin
+      isError:= TRUE;
+      messageDlg('Please enter sensible values', mtError, [mbCancel], 0); //error alert
+      end;
+    end
+  else
+    begin
+    isError:= TRUE;
+    messageDlg('Please enter numerical values', mtError, [mbCancel], 0);  //error alert
+    end;
+result:= isError;
+end;
+
+procedure Tform_bmiEnterDaily.btn_submitClick(Sender: TObject);
+var index: integer;
+    isError: boolean;
+    dailyBMI: double;
+    weight, height: double;
+begin
+  isError:= validateWeightHeight(edt_weight.Text, edt_height.Text);
+  if isError = FALSE then //if no errors
+    begin
+    weight:= strtofloat(edt_weight.Text);
+    height:= strtofloat(edt_height.Text);
+    dailyBMI:= (weight/height)/height; //calculating bmi
+    mmo_comment.Show;  //show the comment
+    index:= trunc(random*5); //generating a random number between 0 and 4
+      case index of //motivating comments chosen at random
+      0: mmo_comment.Text:= 'Keep going, '+currentUser+ '! Your body will thank you for it.';
+      1: mmo_comment.Text:= 'It will take time and determination, '+currentUser+', but you will achieve your goal.';
+      2: mmo_comment.Text:= 'You’re already halfway there to a new, healthier and happier you, ' + currentUser+'.';
+      3: mmo_comment.Text:= 'A Sore today is a strong tomorrow, '+currentUser+'.';
+      4: mmo_comment.Text:= 'A little progress each day adds up to big results, '+currentUser+'.';
+      end;
+    saveData('BMI', floattostr(roundto(dailyBMI,-2))); //saving the users bmi in the progress file
+    edt_weight.ReadOnly:= TRUE;  //making input boxes read only
+    edt_height.ReadOnly:= TRUE;
+    btn_submit.Hide; //hiding submit button
+    end;
+end;
+
+procedure Tform_bmiEnterDaily.cbo_selectViewChange(Sender: TObject);
+begin
+if cbo_selectView.itemIndex = 1 then
+  begin
+  form_bmiTrack.show;
+  form_bmiEnterDaily.Hide;
+  end;
+end;
+
+procedure Tform_bmiEnterDaily.FormCreate(Sender: TObject);
+begin
+edt_message.Hide;
+mmo_comment.Hide;
+mmo_comment.ReadOnly;
+end;
+
+procedure Tform_bmiEnterDaily.lbl_backClick(Sender: TObject);
+begin
+form_bmiEnterDaily.Hide;
+form_dashboard.show;
+form_dashboard.lbl_displayBMI.Caption:= floattostr(roundto(getBMI,-1));
+end;
+
+end.

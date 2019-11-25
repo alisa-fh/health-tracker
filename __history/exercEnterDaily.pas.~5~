@@ -1,0 +1,66 @@
+unit exercEnterDaily;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Imaging.pngimage, globalUnit,
+  Vcl.ExtCtrls;
+
+type
+  Tform_exercEnterDaily = class(TForm)
+    lbl_goal: TLabel;
+    lbl_displaygoal: TLabel;
+    shp_displayGoal: TShape;
+    lbl_date: TLabel;
+    lbl_bmi: TLabel;
+    lbl_displayBMI: TLabel;
+    shp_displayBMI: TShape;
+    lbl_question: TLabel;
+    lbl_bounds: TLabel;
+    Panel1: TPanel;
+    img_icon: TImage;
+    lbl_execTracker: TLabel;
+    lbl_back: TLabel;
+    cbo_selectView: TComboBox;
+    edt_input: TEdit;
+    btn_submit: TButton;
+    mmo_comment: TMemo;
+    procedure btn_submitClick(Sender: TObject);
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  form_exercEnterDaily: Tform_exercEnterDaily;
+
+implementation
+
+{$R *.dfm}
+
+procedure Tform_exercEnterDaily.btn_submitClick(Sender: TObject);
+var index: integer;
+    isError: boolean;
+begin
+  isError:= validateDailyInput(3, edt_input.Text); //validate input
+  if isError = FALSE then //if no errors
+    begin
+    mmo_comment.Show;  //show the comment
+    index:= trunc(random); //generating a random number between 0 and 4
+      case index of //motivating comments chosen at random
+      0: mmo_comment.Text:= 'Keep going, '+currentUser+ '! Your body will thank you for it.';
+      1: mmo_comment.Text:= 'It will take time and determination, '+currentUser+', but you will achieve your goal.';
+      2: mmo_comment.Text:= 'You’re already halfway there to a new, healthier and happier you, ' + currentUser+'.';
+      3: mmo_comment.Text:= 'A Sore today is a strong tomorrow, '+currentUser+'.';
+      4: mmo_comment.Text:= 'A little progress each day adds up to big results, '+currentUser+'.';
+      end;
+    saveData('exerc', edt_input.Text); //saving the users input in the progress file
+    updateFactorBMI; //updates factorBMI according to recent averages
+    edt_input.ReadOnly:= TRUE;
+    btn_submit.Hide; //hiding submit button
+    end;
+end;
+
+end.
